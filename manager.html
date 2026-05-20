@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Novela — Manager</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&family=DM+Mono&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #0e0c0a; --surface: #161412; --surface2: #1e1b18;
+      --border: #2e2a25; --accent: #c9a96e; --accent2: #e8c99a;
+      --text: #ede8e0; --muted: #7a7060; --danger: #e07070; --success: #7ec99a;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+    body::before {
+      content: ''; position: fixed; inset: 0;
+      background: radial-gradient(ellipse 80% 40% at 50% -5%, rgba(201,169,110,0.07) 0%, transparent 70%);
+      pointer-events: none; z-index: 0;
+    }
+
+    .topbar {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(14,12,10,0.92); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0.85rem 2rem;
+      display: flex; align-items: center; gap: 1rem;
+    }
+    .topbar a { color: var(--muted); text-decoration: none; font-size: 0.82rem; transition: color 0.2s; }
+    .topbar a:hover { color: var(--accent); }
+    .topbar-title { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--accent2); margin-left: auto; }
+
+    .main { max-width: 860px; margin: 0 auto; padding: 2rem; position: relative; z-index: 1; }
+    .page-title { font-family: 'Playfair Display', serif; font-size: 2rem; color: var(--accent2); margin-bottom: 0.35rem; }
+    .page-sub { font-size: 0.82rem; color: var(--muted); margin-bottom: 2rem; }
+
+    .layout { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; overflow: hidden;
+    }
+    .card-head {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .card-head-title {
+      font-size: 0.72rem; letter-spacing: 0.15em;
+      text-transform: uppercase; color: var(--muted);
+    }
+    .card-body { padding: 0; max-height: 420px; overflow-y: auto; }
+
+    .novel-item {
+      padding: 0.8rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 0.75rem;
+      cursor: pointer; transition: background 0.15s;
+    }
+    .novel-item:last-child { border-bottom: none; }
+    .novel-item:hover { background: var(--surface2); }
+    .novel-item.active { background: rgba(201,169,110,0.06); border-left: 3px solid var(--accent); }
+    .novel-name-text { font-family: 'Playfair Display', serif; font-size: 0.92rem; color: var(--accent2); flex: 1; }
+    .novel-count-text { font-size: 0.7rem; color: var(--muted); }
+
+    .btn-delete-novel {
+      padding: 0.35rem 0.75rem; border-radius: 5px;
+      background: rgba(224,112,112,0.1); border: 1px solid rgba(224,112,112,0.2);
+      color: var(--danger); font-size: 0.72rem; font-family: 'DM Sans', sans-serif;
+      cursor: pointer; transition: all 0.2s; white-space: nowrap;
+    }
+    .btn-delete-novel:hover { background: rgba(224,112,112,0.2); }
+
+    /* Chapter list panel */
+    .chapter-item {
+      padding: 0.7rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 0.75rem;
+    }
+    .chapter-item:last-child { border-bottom: none; }
+    .ch-num { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--accent); min-width: 48px; }
+    .ch-title { font-size: 0.82rem; color: var(--text); flex: 1; }
+    .btn-delete-ch {
+      padding: 0.3rem 0.6rem; border-radius: 5px;
+      background: transparent; border: 1px solid var(--border);
+      color: var(--muted); font-size: 0.7rem; font-family: 'DM Sans', sans-serif;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .btn-delete-ch:hover { border-color: var(--danger); color: var(--danger); background: rgba(224,112,112,0.07); }
+
+    .empty-state {
+      padding: 2rem 1.25rem; text-align: center;
+      color: var(--muted); font-size: 0.82rem;
+    }
+    .loading-state { padding: 1rem 1.25rem; color: var(--muted); font-size: 0.82rem; }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+      z-index: 200; display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity 0.2s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; padding: 2rem; max-width: 400px; width: 90%;
+      transform: translateY(16px); transition: transform 0.2s;
+    }
+    .modal-overlay.open .modal { transform: translateY(0); }
+    .modal-icon { font-size: 2rem; margin-bottom: 0.75rem; }
+    .modal-title {
+      font-family: 'Playfair Display', serif; font-size: 1.2rem;
+      color: var(--accent2); margin-bottom: 0.5rem;
+    }
+    .modal-body { font-size: 0.85rem; color: var(--muted); line-height: 1.6; margin-bottom: 1.5rem; }
+    .modal-body strong { color: var(--text); }
+    .modal-actions { display: flex; gap: 0.75rem; }
+    .btn {
+      flex: 1; padding: 0.65rem 1rem; border-radius: 8px;
+      font-family: 'DM Sans', sans-serif; font-size: 0.88rem;
+      font-weight: 500; cursor: pointer; border: none; transition: all 0.2s;
+      text-align: center;
+    }
+    .btn-cancel { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); }
+    .btn-cancel:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-confirm-delete { background: rgba(224,112,112,0.15); border: 1px solid rgba(224,112,112,0.3); color: var(--danger); }
+    .btn-confirm-delete:hover { background: rgba(224,112,112,0.25); }
+
+    .toast {
+      position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 300;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 9px; padding: 0.75rem 1.25rem;
+      font-size: 0.82rem; color: var(--text);
+      transform: translateY(20px); opacity: 0;
+      transition: all 0.3s; pointer-events: none;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { border-color: rgba(126,201,154,0.3); color: var(--success); }
+    .toast.error   { border-color: rgba(224,112,112,0.3); color: var(--danger); }
+
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  </style>
+</head>
+<body>
+<div class="topbar">
+  <a href="index.html">← Home</a>
+  <div class="topbar-title">Manage Library</div>
+</div>
+
+<div class="main">
+  <div class="page-title">Manage Library</div>
+  <div class="page-sub">Delete entire novels or individual chapters from your Firestore library.</div>
+
+  <div class="layout">
+    <!-- Novels -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-head-title">Novels</div>
+        <button class="btn-delete-novel" id="reload-btn" onclick="loadNovels()" style="background:transparent; border-color: var(--border); color:var(--muted)">↻ Refresh</button>
+      </div>
+      <div class="card-body" id="novel-list">
+        <div class="loading-state">Loading…</div>
+      </div>
+    </div>
+
+    <!-- Chapters -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-head-title" id="chapter-panel-title">Chapters</div>
+        <button class="btn-delete-novel" id="delete-novel-btn" onclick="confirmDeleteNovel()" style="display:none">Delete Entire Novel</button>
+      </div>
+      <div class="card-body" id="chapter-list">
+        <div class="empty-state">Select a novel to view chapters</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-icon" id="modal-icon">⚠️</div>
+    <div class="modal-title" id="modal-title">Confirm Delete</div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-actions">
+      <button class="btn btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-confirm-delete" id="modal-confirm-btn" onclick="executeDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script type="module">
+  import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getFirestore, collection, getDocs, doc, deleteDoc, query, orderBy, writeBatch }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const cfg = JSON.parse(sessionStorage.getItem('novela_config') || 'null');
+  if (!cfg) { window.location.href = 'index.html'; }
+  const app = getApps().length ? getApps()[0] : initializeApp(cfg);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  onAuthStateChanged(auth, user => { if (!user) window.location.href = 'index.html'; });
+
+  let novels = [];
+  let currentNovel = null;
+  let chapters = [];
+  let pendingDelete = null;
+
+  // ---------- Load novels ----------
+  window.loadNovels = async function() {
+    const el = document.getElementById('novel-list');
+    el.innerHTML = '<div class="loading-state">Loading…</div>';
+    try {
+      const snap = await getDocs(collection(db, '__novela_index__'));
+      const names = [];
+      snap.forEach(d => names.push(d.id));
+
+      if (names.length === 0) {
+        el.innerHTML = '<div class="empty-state">No novels found.<br>Upload some first.</div>';
+        return;
+      }
+
+      novels = [];
+      for (const name of names) {
+        const csnap = await getDocs(collection(db, name));
+        novels.push({ name, count: csnap.size });
+      }
+      novels.sort((a, b) => a.name.localeCompare(b.name));
+      renderNovels();
+    } catch(e) {
+      el.innerHTML = `<div class="loading-state" style="color:var(--danger)">Error: ${e.message}</div>`;
+    }
+  };
+
+  function renderNovels() {
+    const el = document.getElementById('novel-list');
+    el.innerHTML = novels.map(n => `
+      <div class="novel-item ${currentNovel === n.name ? 'active' : ''}" id="novel-row-${btoa(encodeURIComponent(n.name))}" onclick="selectNovel('${escJs(n.name)}')">
+        <div>
+          <div class="novel-name-text">${escHtml(n.name)}</div>
+          <div class="novel-count-text">${n.count} chapter${n.count !== 1 ? 's' : ''}</div>
+        </div>
+      </div>`).join('');
+  }
+
+  // ---------- Select novel ----------
+  window.selectNovel = async function(name) {
+    currentNovel = name;
+    renderNovels();
+
+    document.getElementById('chapter-panel-title').textContent = escHtml(name);
+    document.getElementById('delete-novel-btn').style.display = 'block';
+
+    const el = document.getElementById('chapter-list');
+    el.innerHTML = '<div class="loading-state">Loading…</div>';
+
+    const snap = await getDocs(query(collection(db, name), orderBy('chapter')));
+    chapters = [];
+    snap.forEach(d => chapters.push({ id: d.id, ...d.data() }));
+    chapters.sort((a, b) => (a.chapter ?? 9999) - (b.chapter ?? 9999));
+
+    if (chapters.length === 0) {
+      el.innerHTML = '<div class="empty-state">No chapters found.</div>';
+      return;
+    }
+
+    el.innerHTML = chapters.map((c, i) => `
+      <div class="chapter-item" id="ch-row-${i}">
+        <div class="ch-num">Ch. ${c.chapter ?? '?'}</div>
+        <div class="ch-title">${escHtml(c.title || '(No title)')}</div>
+        <button class="btn-delete-ch" onclick="confirmDeleteChapter(${i})">Delete</button>
+      </div>`).join('');
+  };
+
+  // ---------- Confirm delete novel ----------
+  window.confirmDeleteNovel = function() {
+    if (!currentNovel) return;
+    const n = novels.find(x => x.name === currentNovel);
+    document.getElementById('modal-icon').textContent = '🗑️';
+    document.getElementById('modal-title').textContent = 'Delete Novel';
+    document.getElementById('modal-body').innerHTML =
+      `This will permanently delete <strong>${escHtml(currentNovel)}</strong> and all <strong>${n?.count ?? '?'} chapters</strong>. This cannot be undone.`;
+    pendingDelete = { type: 'novel', name: currentNovel };
+    document.getElementById('modal').classList.add('open');
+  };
+
+  // ---------- Confirm delete chapter ----------
+  window.confirmDeleteChapter = function(idx) {
+    const c = chapters[idx];
+    document.getElementById('modal-icon').textContent = '📄';
+    document.getElementById('modal-title').textContent = 'Delete Chapter';
+    document.getElementById('modal-body').innerHTML =
+      `Delete <strong>Chapter ${c.chapter ?? '?'}: ${escHtml(c.title || 'Untitled')}</strong> from <strong>${escHtml(currentNovel)}</strong>? This cannot be undone.`;
+    pendingDelete = { type: 'chapter', idx, docId: c.id };
+    document.getElementById('modal').classList.add('open');
+  };
+
+  window.closeModal = function() {
+    document.getElementById('modal').classList.remove('open');
+    pendingDelete = null;
+  };
+
+  // ---------- Execute delete ----------
+  window.executeDelete = async function() {
+    if (!pendingDelete) return;
+    document.getElementById('modal-confirm-btn').textContent = 'Deleting…';
+    document.getElementById('modal-confirm-btn').disabled = true;
+
+    try {
+      if (pendingDelete.type === 'novel') {
+        // Delete all chapter docs + index entry
+        const snap = await getDocs(collection(db, pendingDelete.name));
+        const batch = writeBatch(db);
+        snap.forEach(d => batch.delete(d.ref));
+        // Remove from index
+        batch.delete(doc(db, '__novela_index__', pendingDelete.name));
+        await batch.commit();
+
+        novels = novels.filter(n => n.name !== pendingDelete.name);
+        currentNovel = null;
+        chapters = [];
+        document.getElementById('chapter-list').innerHTML = '<div class="empty-state">Select a novel to view chapters</div>';
+        document.getElementById('chapter-panel-title').textContent = 'Chapters';
+        document.getElementById('delete-novel-btn').style.display = 'none';
+        renderNovels();
+        showToast(`"${pendingDelete.name}" deleted`, 'success');
+
+      } else if (pendingDelete.type === 'chapter') {
+        await deleteDoc(doc(db, currentNovel, pendingDelete.docId));
+        chapters.splice(pendingDelete.idx, 1);
+        // Update count
+        const novel = novels.find(n => n.name === currentNovel);
+        if (novel) novel.count--;
+        renderNovels();
+        // Re-render chapter list
+        const el = document.getElementById('chapter-list');
+        el.innerHTML = chapters.map((c, i) => `
+          <div class="chapter-item" id="ch-row-${i}">
+            <div class="ch-num">Ch. ${c.chapter ?? '?'}</div>
+            <div class="ch-title">${escHtml(c.title || '(No title)')}</div>
+            <button class="btn-delete-ch" onclick="confirmDeleteChapter(${i})">Delete</button>
+          </div>`).join('');
+        showToast('Chapter deleted', 'success');
+      }
+    } catch(e) {
+      showToast('Error: ' + e.message, 'error');
+    }
+
+    document.getElementById('modal-confirm-btn').textContent = 'Delete';
+    document.getElementById('modal-confirm-btn').disabled = false;
+    closeModal();
+  };
+
+  // ---------- Toast ----------
+  function showToast(msg, type = 'success') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = `toast ${type} show`;
+    setTimeout(() => { t.className = 'toast'; }, 3000);
+  }
+
+  function escHtml(str) {
+    return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function escJs(str) {
+    return String(str ?? '').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  }
+
+  window.escHtml = escHtml;
+  window.escJs = escJs;
+
+  loadNovels();
+</script>
+</body>
+</html>

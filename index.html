@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Novela — My Library</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&family=DM+Mono&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #0e0c0a;
+      --surface: #161412;
+      --surface2: #1e1b18;
+      --border: #2e2a25;
+      --accent: #c9a96e;
+      --accent2: #e8c99a;
+      --text: #ede8e0;
+      --muted: #7a7060;
+      --danger: #e07070;
+      --success: #7ec99a;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow-x: hidden;
+    }
+
+    /* Background texture */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(201,169,110,0.08) 0%, transparent 70%),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='none'/%3E%3Ccircle cx='1' cy='1' r='0.5' fill='rgba(255,255,255,0.015)'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container { position: relative; z-index: 1; width: 100%; max-width: 480px; padding: 2rem; }
+
+    .brand {
+      text-align: center;
+      margin-bottom: 2.5rem;
+      animation: fadeDown 0.6s ease both;
+    }
+    .brand-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 3rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--accent2);
+      line-height: 1;
+    }
+    .brand-sub {
+      font-size: 0.8rem;
+      letter-spacing: 0.25em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-top: 0.4rem;
+    }
+
+    /* Panels */
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2rem;
+      animation: fadeUp 0.5s ease both;
+    }
+    .panel-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.25rem;
+      color: var(--accent2);
+      margin-bottom: 1.5rem;
+    }
+
+    /* Config panel */
+    #config-panel { animation-delay: 0.1s; }
+    #config-panel .hint {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-bottom: 1.2rem;
+      line-height: 1.6;
+    }
+    .config-grid {
+      display: grid;
+      gap: 0.75rem;
+    }
+    .field label {
+      display: block;
+      font-size: 0.72rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.35rem;
+    }
+    .field input {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 0.6rem 0.85rem;
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.78rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .field input:focus { border-color: var(--accent); }
+    .field input::placeholder { color: var(--muted); opacity: 0.5; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.7rem 1.4rem;
+      border-radius: 8px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.88rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #0e0c0a;
+      width: 100%;
+      margin-top: 1rem;
+    }
+    .btn-primary:hover { background: var(--accent2); transform: translateY(-1px); }
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Login panel */
+    #login-panel { display: none; animation-delay: 0.1s; }
+    .divider {
+      display: flex; align-items: center; gap: 0.75rem;
+      margin: 1.2rem 0; color: var(--muted); font-size: 0.75rem;
+    }
+    .divider::before, .divider::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
+    }
+
+    /* Dashboard */
+    #dashboard { display: none; animation-delay: 0.1s; }
+    .user-row {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 1.5rem; padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .user-email { font-size: 0.8rem; color: var(--muted); font-family: 'DM Mono', monospace; }
+    .nav-cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+    }
+    .nav-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.25rem 1rem;
+      text-align: center;
+      text-decoration: none;
+      color: var(--text);
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+    .nav-card:hover {
+      border-color: var(--accent);
+      background: rgba(201,169,110,0.06);
+      transform: translateY(-2px);
+    }
+    .nav-card .icon { font-size: 1.75rem; margin-bottom: 0.5rem; }
+    .nav-card .label {
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--accent2);
+      display: block;
+    }
+    .nav-card .desc {
+      font-size: 0.7rem;
+      color: var(--muted);
+      margin-top: 0.2rem;
+      display: block;
+    }
+    /* Manager card spans full width */
+    .nav-card.full { grid-column: 1 / -1; display: flex; align-items: center; gap: 1rem; text-align: left; }
+    .nav-card.full .icon { margin-bottom: 0; font-size: 1.5rem; }
+
+    /* Messages */
+    .msg {
+      font-size: 0.78rem;
+      padding: 0.6rem 0.85rem;
+      border-radius: 6px;
+      margin-top: 0.75rem;
+      display: none;
+    }
+    .msg.error { background: rgba(224,112,112,0.1); color: var(--danger); border: 1px solid rgba(224,112,112,0.2); display: block; }
+    .msg.success { background: rgba(126,201,154,0.1); color: var(--success); border: 1px solid rgba(126,201,154,0.2); display: block; }
+
+    .step-indicator {
+      display: flex; align-items: center; gap: 0.5rem;
+      margin-bottom: 1.5rem; font-size: 0.75rem; color: var(--muted);
+    }
+    .step { display: flex; align-items: center; gap: 0.35rem; }
+    .step.active { color: var(--accent); }
+    .step.done { color: var(--success); }
+    .step-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: currentColor;
+    }
+    .step-sep { flex: 1; height: 1px; background: var(--border); max-width: 30px; }
+
+    @keyframes fadeDown { from { opacity:0; transform:translateY(-16px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes fadeUp   { from { opacity:0; transform:translateY(16px);  } to { opacity:1; transform:translateY(0); } }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="brand">
+    <div class="brand-title">Novela</div>
+    <div class="brand-sub">Personal Library</div>
+  </div>
+
+  <!-- Step 1: Firebase Config -->
+  <div class="panel" id="config-panel">
+    <div class="step-indicator">
+      <div class="step active"><div class="step-dot"></div> Config</div>
+      <div class="step-sep"></div>
+      <div class="step" id="step-login"><div class="step-dot"></div> Login</div>
+      <div class="step-sep"></div>
+      <div class="step" id="step-dash"><div class="step-dot"></div> Library</div>
+    </div>
+    <div class="panel-title">Firebase Config</div>
+    <p class="hint">Enter your Firebase project credentials. These are stored in session memory only and never sent anywhere except Firebase.</p>
+    <div class="config-grid">
+      <div class="field"><label>API Key</label><input id="cfg-apiKey" type="password" placeholder="AIza..."/></div>
+      <div class="field"><label>Auth Domain</label><input id="cfg-authDomain" placeholder="project.firebaseapp.com"/></div>
+      <div class="field"><label>Project ID</label><input id="cfg-projectId" placeholder="my-project"/></div>
+      <div class="field"><label>Storage Bucket</label><input id="cfg-storageBucket" placeholder="my-project.appspot.com"/></div>
+      <div class="field"><label>Messaging Sender ID</label><input id="cfg-messagingSenderId" placeholder="123456789"/></div>
+      <div class="field"><label>App ID</label><input id="cfg-appId" placeholder="1:123:web:abc..."/></div>
+    </div>
+    <div id="config-msg" class="msg"></div>
+    <button class="btn btn-primary" onclick="saveConfig()">Continue →</button>
+  </div>
+
+  <!-- Step 2: Login -->
+  <div class="panel" id="login-panel">
+    <div class="step-indicator">
+      <div class="step done"><div class="step-dot"></div> Config</div>
+      <div class="step-sep"></div>
+      <div class="step active"><div class="step-dot"></div> Login</div>
+      <div class="step-sep"></div>
+      <div class="step" id="step-dash2"><div class="step-dot"></div> Library</div>
+    </div>
+    <div class="panel-title">Sign In</div>
+    <div class="config-grid">
+      <div class="field"><label>Email</label><input id="login-email" type="email" placeholder="you@example.com"/></div>
+      <div class="field"><label>Password</label><input id="login-password" type="password" placeholder="••••••••"/></div>
+    </div>
+    <div id="login-msg" class="msg"></div>
+    <button class="btn btn-primary" onclick="signIn()">Sign In →</button>
+    <div class="divider">or</div>
+    <button class="btn btn-ghost" style="width:100%" onclick="signUp()">Create Account</button>
+    <div style="margin-top:0.75rem; text-align:center">
+      <button class="btn btn-ghost" onclick="showConfig()" style="font-size:0.72rem">← Change Config</button>
+    </div>
+  </div>
+
+  <!-- Dashboard -->
+  <div class="panel" id="dashboard">
+    <div class="user-row">
+      <div>
+        <div style="font-family:'Playfair Display',serif; font-size:1.1rem; color:var(--accent2)">My Library</div>
+        <div class="user-email" id="user-email-display"></div>
+      </div>
+      <button class="btn btn-ghost" onclick="signOut()">Sign Out</button>
+    </div>
+    <div class="nav-cards">
+      <div class="nav-card" onclick="goto('uploader.html')">
+        <div class="icon">📤</div>
+        <span class="label">Upload</span>
+        <span class="desc">Add novel chapters</span>
+      </div>
+      <div class="nav-card" onclick="goto('reader.html')">
+        <div class="icon">📖</div>
+        <span class="label">Read</span>
+        <span class="desc">Browse your library</span>
+      </div>
+      <div class="nav-card full" onclick="goto('manager.html')">
+        <div class="icon">🗂️</div>
+        <div>
+          <span class="label">Manage</span>
+          <span class="desc">Delete novels or chapters</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as fbSignOut, onAuthStateChanged }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+  let auth;
+
+  function getConfig() {
+    const raw = sessionStorage.getItem('novela_config');
+    return raw ? JSON.parse(raw) : null;
+  }
+
+  window.saveConfig = function() {
+    const cfg = {
+      apiKey:            document.getElementById('cfg-apiKey').value.trim(),
+      authDomain:        document.getElementById('cfg-authDomain').value.trim(),
+      projectId:         document.getElementById('cfg-projectId').value.trim(),
+      storageBucket:     document.getElementById('cfg-storageBucket').value.trim(),
+      messagingSenderId: document.getElementById('cfg-messagingSenderId').value.trim(),
+      appId:             document.getElementById('cfg-appId').value.trim(),
+    };
+    if (!cfg.apiKey || !cfg.authDomain || !cfg.projectId) {
+      showMsg('config-msg', 'error', 'API Key, Auth Domain and Project ID are required.');
+      return;
+    }
+    sessionStorage.setItem('novela_config', JSON.stringify(cfg));
+    try {
+      const app = initializeApp(cfg);
+      auth = getAuth(app);
+      document.getElementById('config-panel').style.display = 'none';
+      document.getElementById('login-panel').style.display = 'block';
+    } catch(e) {
+      showMsg('config-msg', 'error', 'Invalid config: ' + e.message);
+    }
+  };
+
+  window.showConfig = function() {
+    document.getElementById('login-panel').style.display = 'none';
+    document.getElementById('config-panel').style.display = 'block';
+  };
+
+  window.signIn = async function() {
+    const email = document.getElementById('login-email').value.trim();
+    const pass  = document.getElementById('login-password').value;
+    try {
+      await signInWithEmailAndPassword(auth, email, pass);
+    } catch(e) {
+      showMsg('login-msg', 'error', friendlyError(e.code));
+    }
+  };
+
+  window.signUp = async function() {
+    const email = document.getElementById('login-email').value.trim();
+    const pass  = document.getElementById('login-password').value;
+    if (pass.length < 6) { showMsg('login-msg', 'error', 'Password must be at least 6 characters.'); return; }
+    try {
+      await createUserWithEmailAndPassword(auth, email, pass);
+    } catch(e) {
+      showMsg('login-msg', 'error', friendlyError(e.code));
+    }
+  };
+
+  window.signOut = async function() {
+    await fbSignOut(auth);
+    document.getElementById('dashboard').style.display = 'none';
+    document.getElementById('login-panel').style.display = 'block';
+  };
+
+  window.goto = function(page) {
+    window.location.href = page;
+  };
+
+  // Auto-init if config already in session
+  const existing = getConfig();
+  if (existing) {
+    try {
+      const app = initializeApp(existing);
+      auth = getAuth(app);
+      document.getElementById('config-panel').style.display = 'none';
+      document.getElementById('login-panel').style.display = 'block';
+
+      onAuthStateChanged(auth, user => {
+        if (user) showDashboard(user);
+      });
+    } catch(e) {}
+  }
+
+  // Auth state
+  function initAuth(a) {
+    onAuthStateChanged(a, user => {
+      if (user) showDashboard(user);
+    });
+  }
+
+  // Override saveConfig to also init auth listener
+  const _orig = window.saveConfig;
+  window.saveConfig = function() {
+    _orig();
+    if (auth) initAuth(auth);
+  };
+
+  function showDashboard(user) {
+    document.getElementById('config-panel').style.display = 'none';
+    document.getElementById('login-panel').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    document.getElementById('user-email-display').textContent = user.email;
+  }
+
+  function showMsg(id, type, text) {
+    const el = document.getElementById(id);
+    el.className = 'msg ' + type;
+    el.textContent = text;
+  }
+
+  function friendlyError(code) {
+    const map = {
+      'auth/invalid-email': 'Invalid email address.',
+      'auth/user-not-found': 'No account found with that email.',
+      'auth/wrong-password': 'Incorrect password.',
+      'auth/email-already-in-use': 'Email already in use.',
+      'auth/invalid-credential': 'Invalid credentials. Check email and password.',
+      'auth/too-many-requests': 'Too many attempts. Try again later.',
+    };
+    return map[code] || 'Something went wrong. Try again.';
+  }
+
+  if (existing && auth) initAuth(auth);
+</script>
+</body>
+</html>

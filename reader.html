@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Novela — Reader</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&family=DM+Mono&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #0e0c0a; --surface: #161412; --surface2: #1e1b18;
+      --border: #2e2a25; --accent: #c9a96e; --accent2: #e8c99a;
+      --text: #ede8e0; --muted: #7a7060; --danger: #e07070; --success: #7ec99a;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+    body::before {
+      content: ''; position: fixed; inset: 0;
+      background: radial-gradient(ellipse 80% 40% at 50% -5%, rgba(201,169,110,0.07) 0%, transparent 70%);
+      pointer-events: none; z-index: 0;
+    }
+
+    .topbar {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(14,12,10,0.92); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0.85rem 2rem;
+      display: flex; align-items: center; gap: 1rem;
+    }
+    .topbar a { color: var(--muted); text-decoration: none; font-size: 0.82rem; transition: color 0.2s; }
+    .topbar a:hover { color: var(--accent); }
+    .topbar-title { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--accent2); }
+    .topbar-right { margin-left: auto; display: flex; gap: 0.75rem; align-items: center; }
+
+    /* Layout */
+    .layout { display: flex; height: calc(100vh - 53px); position: relative; z-index: 1; }
+
+    /* Sidebar */
+    .sidebar {
+      width: 280px; min-width: 280px;
+      border-right: 1px solid var(--border);
+      background: var(--surface);
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    .sidebar-head {
+      padding: 1rem 1.25rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-head-title {
+      font-size: 0.7rem; letter-spacing: 0.15em;
+      text-transform: uppercase; color: var(--muted);
+      margin-bottom: 0.6rem;
+    }
+    .search-box {
+      width: 100%; background: var(--surface2);
+      border: 1px solid var(--border); border-radius: 6px;
+      padding: 0.45rem 0.75rem; color: var(--text);
+      font-family: 'DM Sans', sans-serif; font-size: 0.82rem;
+      outline: none; transition: border-color 0.2s;
+    }
+    .search-box:focus { border-color: var(--accent); }
+    .search-box::placeholder { color: var(--muted); opacity: 0.5; }
+
+    .novel-list { overflow-y: auto; flex: 1; padding: 0.5rem 0; }
+    .novel-item {
+      padding: 0.7rem 1.25rem;
+      cursor: pointer; transition: background 0.15s;
+      border-left: 3px solid transparent;
+    }
+    .novel-item:hover { background: var(--surface2); }
+    .novel-item.active {
+      background: rgba(201,169,110,0.08);
+      border-left-color: var(--accent);
+    }
+    .novel-name {
+      font-family: 'Playfair Display', serif;
+      font-size: 0.92rem; color: var(--accent2);
+      line-height: 1.3;
+    }
+    .novel-count { font-size: 0.7rem; color: var(--muted); margin-top: 0.2rem; }
+
+    /* Chapter panel */
+    .chapter-panel {
+      width: 220px; min-width: 220px;
+      border-right: 1px solid var(--border);
+      background: var(--surface2);
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    .chapter-panel-head {
+      padding: 1rem 1rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.7rem; letter-spacing: 0.15em;
+      text-transform: uppercase; color: var(--muted);
+    }
+    .chapter-list { overflow-y: auto; flex: 1; padding: 0.4rem 0; }
+    .chapter-item {
+      padding: 0.6rem 1rem;
+      cursor: pointer; transition: background 0.15s;
+      border-left: 3px solid transparent;
+    }
+    .chapter-item:hover { background: rgba(255,255,255,0.04); }
+    .chapter-item.active {
+      background: rgba(201,169,110,0.08);
+      border-left-color: var(--accent);
+    }
+    .ch-num { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--accent); }
+    .ch-title { font-size: 0.8rem; color: var(--text); margin-top: 0.1rem; line-height: 1.3; }
+
+    /* Reader */
+    .reader { flex: 1; overflow-y: auto; padding: 3rem 4rem; }
+    .reader-empty {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      height: 100%; color: var(--muted); text-align: center; gap: 0.75rem;
+    }
+    .reader-empty-icon { font-size: 3rem; opacity: 0.3; }
+    .reader-empty-text { font-size: 0.88rem; }
+
+    .reader-content { max-width: 680px; margin: 0 auto; }
+    .reader-chapter-label {
+      font-family: 'DM Mono', monospace; font-size: 0.75rem;
+      color: var(--accent); letter-spacing: 0.12em; margin-bottom: 0.5rem;
+    }
+    .reader-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 2rem; color: var(--accent2);
+      line-height: 1.2; margin-bottom: 2rem;
+    }
+    .reader-divider {
+      border: none; border-top: 1px solid var(--border);
+      margin-bottom: 2rem;
+    }
+    .reader-body {
+      font-size: 1.05rem; line-height: 1.9;
+      color: var(--text); font-family: 'Playfair Display', serif;
+      font-weight: 400;
+    }
+    .reader-body p { margin-bottom: 1.25rem; }
+
+    /* Nav buttons */
+    .chapter-nav {
+      display: flex; justify-content: space-between;
+      margin-top: 3rem; padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+    }
+    .btn {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      padding: 0.55rem 1.1rem; border-radius: 7px;
+      font-family: 'DM Sans', sans-serif; font-size: 0.82rem;
+      font-weight: 500; cursor: pointer; border: none; transition: all 0.2s;
+      text-decoration: none;
+    }
+    .btn-ghost {
+      background: transparent; border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-ghost:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+    .loading { color: var(--muted); font-size: 0.82rem; padding: 1rem 1.25rem; }
+
+    /* Font size control */
+    .font-controls { display: flex; align-items: center; gap: 0.5rem; }
+    .font-btn {
+      width: 28px; height: 28px; border-radius: 5px;
+      background: var(--surface2); border: 1px solid var(--border);
+      color: var(--muted); font-size: 0.9rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+    }
+    .font-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .font-size-label { font-size: 0.72rem; color: var(--muted); font-family: 'DM Mono', monospace; min-width: 28px; text-align: center; }
+  </style>
+</head>
+<body>
+<div class="topbar">
+  <a href="index.html">← Home</a>
+  <div class="topbar-title">Reader</div>
+  <div class="topbar-right">
+    <div class="font-controls">
+      <button class="font-btn" onclick="changeFontSize(-1)">A−</button>
+      <div class="font-size-label" id="font-label">16</div>
+      <button class="font-btn" onclick="changeFontSize(1)">A+</button>
+    </div>
+  </div>
+</div>
+
+<div class="layout">
+  <!-- Novel list -->
+  <div class="sidebar">
+    <div class="sidebar-head">
+      <div class="sidebar-head-title">Novels</div>
+      <input class="search-box" id="novel-search" placeholder="Search novels…" oninput="filterNovels(this.value)"/>
+    </div>
+    <div class="novel-list" id="novel-list">
+      <div class="loading">Loading…</div>
+    </div>
+  </div>
+
+  <!-- Chapter list -->
+  <div class="chapter-panel">
+    <div class="chapter-panel-head">Chapters</div>
+    <div class="chapter-list" id="chapter-list">
+      <div class="loading" style="opacity:0.4">Select a novel</div>
+    </div>
+  </div>
+
+  <!-- Reader area -->
+  <div class="reader" id="reader">
+    <div class="reader-empty">
+      <div class="reader-empty-icon">📖</div>
+      <div class="reader-empty-text">Select a novel and chapter to start reading</div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getFirestore, collection, getDocs, doc, getDoc, query, orderBy }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const cfg = JSON.parse(sessionStorage.getItem('novela_config') || 'null');
+  if (!cfg) { window.location.href = 'index.html'; }
+  const app = getApps().length ? getApps()[0] : initializeApp(cfg);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  onAuthStateChanged(auth, user => { if (!user) window.location.href = 'index.html'; });
+
+  let novels = [];
+  let chapters = [];
+  let currentNovel = null;
+  let currentChapterIdx = 0;
+  let fontSize = parseInt(localStorage.getItem('novela_font') || '16');
+
+  applyFontSize();
+
+  // ---------- Load novels ----------
+  async function loadNovels() {
+    // Firestore doesn't list collections directly — we store a novels index doc
+    // Fallback: we store novel names in a special __index__ collection
+    const novelList = document.getElementById('novel-list');
+
+    try {
+      // Try to get index
+      const indexSnap = await getDocs(collection(db, '__novela_index__'));
+      const names = new Set();
+      indexSnap.forEach(d => names.add(d.id));
+
+      if (names.size === 0) {
+        novelList.innerHTML = '<div class="loading" style="opacity:0.4">No novels found.<br>Upload some first.</div>';
+        return;
+      }
+
+      // For each novel, count chapters
+      novels = [];
+      for (const name of names) {
+        const snap = await getDocs(collection(db, name));
+        novels.push({ name, count: snap.size });
+      }
+      novels.sort((a, b) => a.name.localeCompare(b.name));
+      renderNovels(novels);
+    } catch(e) {
+      novelList.innerHTML = `<div class="loading" style="color:var(--danger)">Error: ${e.message}</div>`;
+    }
+  }
+
+  function renderNovels(list) {
+    const el = document.getElementById('novel-list');
+    if (list.length === 0) {
+      el.innerHTML = '<div class="loading" style="opacity:0.4">No novels found.</div>';
+      return;
+    }
+    el.innerHTML = list.map(n => `
+      <div class="novel-item" onclick="selectNovel('${escHtml(n.name)}')" id="novel-${btoa(encodeURIComponent(n.name))}">
+        <div class="novel-name">${escHtml(n.name)}</div>
+        <div class="novel-count">${n.count} chapter${n.count !== 1 ? 's' : ''}</div>
+      </div>`).join('');
+  }
+
+  window.filterNovels = function(q) {
+    const filtered = novels.filter(n => n.name.toLowerCase().includes(q.toLowerCase()));
+    renderNovels(filtered);
+  };
+
+  // ---------- Select novel ----------
+  window.selectNovel = async function(name) {
+    currentNovel = name;
+    document.querySelectorAll('.novel-item').forEach(el => el.classList.remove('active'));
+    const key = btoa(encodeURIComponent(name));
+    const el = document.getElementById(`novel-${key}`);
+    if (el) el.classList.add('active');
+
+    const chapterList = document.getElementById('chapter-list');
+    chapterList.innerHTML = '<div class="loading">Loading…</div>';
+
+    const snap = await getDocs(query(collection(db, name), orderBy('chapter')));
+    chapters = [];
+    snap.forEach(d => chapters.push({ id: d.id, ...d.data() }));
+    chapters.sort((a, b) => (a.chapter ?? 9999) - (b.chapter ?? 9999));
+
+    chapterList.innerHTML = chapters.map((c, i) => `
+      <div class="chapter-item" onclick="selectChapter(${i})" id="chap-${i}">
+        <div class="ch-num">Ch. ${c.chapter ?? '?'}</div>
+        <div class="ch-title">${escHtml(c.title || '(No title)')}</div>
+      </div>`).join('');
+
+    document.getElementById('reader').innerHTML = `
+      <div class="reader-empty">
+        <div class="reader-empty-icon">📑</div>
+        <div class="reader-empty-text">Select a chapter</div>
+      </div>`;
+  };
+
+  // ---------- Select chapter ----------
+  window.selectChapter = function(idx) {
+    currentChapterIdx = idx;
+    document.querySelectorAll('.chapter-item').forEach(el => el.classList.remove('active'));
+    const el = document.getElementById(`chap-${idx}`);
+    if (el) { el.classList.add('active'); el.scrollIntoView({ block: 'nearest' }); }
+    renderChapter(chapters[idx]);
+  };
+
+  function renderChapter(c) {
+    const bodyHtml = (c.chapter_content || '')
+      .split(/\n{2,}/)
+      .map(p => `<p>${escHtml(p.trim())}</p>`)
+      .join('');
+
+    document.getElementById('reader').innerHTML = `
+      <div class="reader-content">
+        <div class="reader-chapter-label">Chapter ${c.chapter ?? '—'}</div>
+        <div class="reader-title">${escHtml(c.title || 'Untitled')}</div>
+        <hr class="reader-divider"/>
+        <div class="reader-body" id="reader-body">${bodyHtml}</div>
+        <div class="chapter-nav">
+          <button class="btn btn-ghost" onclick="prevChapter()" ${currentChapterIdx === 0 ? 'disabled' : ''}>← Previous</button>
+          <button class="btn btn-ghost" onclick="nextChapter()" ${currentChapterIdx === chapters.length - 1 ? 'disabled' : ''}>Next →</button>
+        </div>
+      </div>`;
+    applyFontSize();
+    document.getElementById('reader').scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  window.prevChapter = function() { if (currentChapterIdx > 0) selectChapter(currentChapterIdx - 1); };
+  window.nextChapter = function() { if (currentChapterIdx < chapters.length - 1) selectChapter(currentChapterIdx + 1); };
+
+  // ---------- Font size ----------
+  window.changeFontSize = function(delta) {
+    fontSize = Math.min(24, Math.max(12, fontSize + delta));
+    localStorage.setItem('novela_font', fontSize);
+    applyFontSize();
+  };
+  function applyFontSize() {
+    document.querySelectorAll('.reader-body').forEach(el => el.style.fontSize = fontSize + 'px');
+    document.getElementById('font-label').textContent = fontSize;
+  }
+
+  function escHtml(str) {
+    return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  loadNovels();
+</script>
+</body>
+</html>
