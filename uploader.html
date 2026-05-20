@@ -371,7 +371,7 @@
         });
 
         // Register novel in index so reader/manager can discover it
-        await setDoc(doc(db, '__novela_index__', novelTitle), {
+        await setDoc(doc(db, 'novela_index', novelTitle), {
           name: novelTitle,
           updated_at: new Date().toISOString(),
         }, { merge: true });
@@ -383,7 +383,6 @@
         statusEl.textContent = '✗ Error';
         statusEl.className = 'fi-status error';
         statusEl.title = e.message;
-        alert("Upload error: " + e.code + " — " + e.message);
         console.error('Upload error:', e);
         document.getElementById('upload-status').textContent = 'Error: ' + e.message;
         errors++;

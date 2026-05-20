@@ -251,7 +251,7 @@
 
     try {
       // Try to get index
-      const indexSnap = await getDocs(collection(db, '__novela_index__'));
+      const indexSnap = await getDocs(collection(db, 'novela_index'));
       const names = new Set();
       indexSnap.forEach(d => names.add(d.id));
 

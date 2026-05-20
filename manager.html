@@ -219,7 +219,7 @@
     const el = document.getElementById('novel-list');
     el.innerHTML = '<div class="loading-state">Loading…</div>';
     try {
-      const snap = await getDocs(collection(db, '__novela_index__'));
+      const snap = await getDocs(collection(db, 'novela_index'));
       const names = [];
       snap.forEach(d => names.push(d.id));
 
@@ -321,7 +321,7 @@
         const batch = writeBatch(db);
         snap.forEach(d => batch.delete(d.ref));
         // Remove from index
-        batch.delete(doc(db, '__novela_index__', pendingDelete.name));
+        batch.delete(doc(db, 'novela_index', pendingDelete.name));
         await batch.commit();
 
         novels = novels.filter(n => n.name !== pendingDelete.name);
