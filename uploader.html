@@ -370,12 +370,6 @@
           uploaded_at: new Date().toISOString(),
         });
 
-        // Register novel in index so reader/manager can discover it
-        await setDoc(doc(db, 'novela_index', novelTitle), {
-          name: novelTitle,
-          updated_at: new Date().toISOString(),
-        }, { merge: true });
-
         statusEl.textContent = '✓ Done';
         statusEl.className = 'fi-status done';
         done++;
@@ -384,8 +378,17 @@
         statusEl.className = 'fi-status error';
         statusEl.title = e.message;
         console.error('Upload error:', e);
-        document.getElementById('upload-status').textContent = 'Error: ' + e.message;
         errors++;
+      }
+
+      // Register novel in index separately — does not affect chapter upload status
+      try {
+        await setDoc(doc(db, 'novela_index', novelTitle), {
+          name: novelTitle,
+          updated_at: new Date().toISOString(),
+        }, { merge: true });
+      } catch(e) {
+        console.warn('Index write failed (non-critical):', e.message);
       }
 
       fill.style.width = `${Math.round(((i + 1) / parsedFiles.length) * 100)}%`;
