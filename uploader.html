@@ -383,6 +383,7 @@
         statusEl.textContent = '✗ Error';
         statusEl.className = 'fi-status error';
         statusEl.title = e.message;
+        alert("Upload error: " + e.code + " — " + e.message);
         console.error('Upload error:', e);
         document.getElementById('upload-status').textContent = 'Error: ' + e.message;
         errors++;
